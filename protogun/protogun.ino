@@ -163,9 +163,9 @@ void cycleBackpackLights() {
 
   for (int i = 0; i < 4; i++) {
     if (i == next) {
-      backpackstrip.setPixelColor(i, red);
-    } else {
       backpackstrip.setPixelColor(i, backpackLedOff);
+    } else {
+      backpackstrip.setPixelColor(i, red);
     }
   }
 }
