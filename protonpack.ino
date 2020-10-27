@@ -22,7 +22,7 @@ uint32_t _8 = strip.gamma32(strip.ColorHSV(21845, 255, 100));
 uint32_t white = strip.Color(255, 255, 255);
 
 uint32_t fireBlue = strip.gamma32(backpackstrip.ColorHSV(43690, 255, 255));
-uint32_t firePink = strip.gamma32(backpackstrip.ColorHSV(78643, 255, 255));
+uint32_t firePink = strip.gamma32(backpackstrip.ColorHSV(54613, 255, 255));
 
 uint32_t power[] = {_8, _7, _6, _5, _4, _3, _2, _1};
 
@@ -38,6 +38,7 @@ const int upInterval = 200;
 const int downInterval = 1000;
 
 unsigned long lastTime = 0;
+unsigned long lastCycleTime = 0;
 
 int currentCharge = 7;
 boolean currRedKey = false;
@@ -62,19 +63,19 @@ void setup() {
   strip.setBrightness(255);
 
   //LED in proton gun, THis is always on white.
-  strip.setPixelColor(8, 255, 255, 255);
+  strip.setPixelColor(8, 255, 0, 0);
 
 
-  startupSequence();
-  lastTime = millis();
+ // startupSequence();
+  lastCycleTime = lastTime = millis();
 }
 
 
 void loop() {
 
-  cycleBackpackLights();
-
   boolean isRedPressed = isRedButtonPressed();
+
+  cycleBackpackLights(isRedPressed);
 
   if (isRedPressed && !prevRedKey) {
     //start pressing button
@@ -144,17 +145,24 @@ void failureLights() {
 }
 
 int next = 0;
-unsigned long lastCycleTime = 0;
-int cycleTime = 400;
-void cycleBackpackLights() {
+
+const int cycleTime = 1000;
+void cycleBackpackLights(boolean firing) {
 
   backpackstrip.setPixelColor(4, blue);
   backpackstrip.setPixelColor(5, blue);
-
+  int currentCycleTime = cycleTime;
+  if(firing) {
+    currentCycleTime = cycleTime/2;
+    backpackstrip.setPixelColor(4, ledOff);
+  } else {
+    backpackstrip.setPixelColor(4, blue);
+  }
   //Cycle lights
   long currentTime = millis();
-  if (currentTime > lastCycleTime + cycleTime) {
-    lastTime = currentTime;
+  if (currentTime > lastCycleTime + currentCycleTime) {
+     
+    lastCycleTime = currentTime;
     next++;
     if (next > 3) {
       next = 0;
@@ -210,7 +218,7 @@ void turnOffLight(int pos) {
 }
 
 void fireNoise() {
-  tone(buzzerPin, fireSound, 200);
+    tone(buzzerPin, fireSound, 200);
 }
 
 void playWarning() {
