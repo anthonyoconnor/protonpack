@@ -21,8 +21,8 @@ uint32_t _7 = strip.gamma32(strip.ColorHSV(18000, 255, 100));
 uint32_t _8 = strip.gamma32(strip.ColorHSV(21845, 255, 100));
 uint32_t white = strip.Color(255, 255, 255);
 
-uint32_t fireBlue = strip.gamma32(backpackstrip.ColorHSV(43690, 255, 255));
-uint32_t firePink = strip.gamma32(backpackstrip.ColorHSV(54613, 255, 255));
+uint32_t fireBlue = strip.ColorHSV(43690, 255, 255);
+uint32_t firePink = strip.ColorHSV(54613, 255, 255);
 
 uint32_t power[] = {_8, _7, _6, _5, _4, _3, _2, _1};
 
@@ -30,7 +30,7 @@ uint32_t backpackLedOff = backpackstrip.ColorHSV(0, 0, 0);
 uint32_t red = backpackstrip.gamma32(backpackstrip.ColorHSV(0, 255, 255));
 uint32_t blue = backpackstrip.gamma32(backpackstrip.ColorHSV(43690, 255, 255));
 
-const int fireSound = 100;
+const int fireSound = 10000;
 const int warningSound = 440;
 const int readySound = 600;
 
@@ -39,6 +39,7 @@ const int downInterval = 1000;
 
 unsigned long lastTime = 0;
 unsigned long lastCycleTime = 0;
+unsigned long lastFireCycleTime = 0;
 
 int currentCharge = 7;
 boolean currRedKey = false;
@@ -62,17 +63,16 @@ void setup() {
   strip.show();
   strip.setBrightness(255);
 
-  //LED in proton gun, THis is always on white.
-  strip.setPixelColor(8, 255, 0, 0);
 
-
- // startupSequence();
-  lastCycleTime = lastTime = millis();
+  startupSequence();
+  lastFireCycleTime = lastCycleTime = lastTime = millis();
 }
 
 
 void loop() {
 
+  
+  
   boolean isRedPressed = isRedButtonPressed();
 
   cycleBackpackLights(isRedPressed);
@@ -132,6 +132,9 @@ void loop() {
 }
 
 void failureLights() {
+
+  turnOffGunLights();
+  
   //turn off blue lights.
   backpackstrip.setPixelColor(4, ledOff);
   backpackstrip.setPixelColor(5, ledOff);
@@ -179,16 +182,23 @@ void cycleBackpackLights(boolean firing) {
 }
 
 boolean nextBlue = false;
+int fireSpeed = 100;
 void fireLights()
 {
-  if (nextBlue) {
-    nextBlue = false;
-    strip.setPixelColor(9, fireBlue);
-    strip.setPixelColor(10, ledOff);
-  } else {
-    nextBlue = true;
-    strip.setPixelColor(9, ledOff);
-    strip.setPixelColor(10, firePink);
+  long currentTime = millis();
+  if (currentTime > lastFireCycleTime + fireSpeed) {
+    if (nextBlue) {
+      nextBlue = false;
+      strip.setPixelColor(9, fireBlue);
+      strip.setPixelColor(10, ledOff);
+    //  tone(buzzerPin, 200, 50);
+    } else {
+      nextBlue = true;
+      strip.setPixelColor(9, ledOff);
+      strip.setPixelColor(10, firePink);
+    //  tone(buzzerPin, 500, 50);
+    }
+    lastFireCycleTime = currentTime;
   }
   // flash lights
 }
@@ -196,10 +206,10 @@ void fireLights()
 void turnOffGunLights() {
   strip.setPixelColor(9, ledOff);
   strip.setPixelColor(10, ledOff);
+  strip.show();
 }
 
-void updateStripLights() {
-
+void updateStripLights() { 
   int turnOffUntil = 7 - currentCharge;
   for (int i = 0; i <= LED_COUNT; i++) {
 
@@ -210,6 +220,9 @@ void updateStripLights() {
     }
   }
 
+  //8 is the LED in proton gun, This is always the same colour.
+  strip.setPixelColor(8, 0, 255, 255);
+
   strip.show();
 }
 
@@ -218,7 +231,18 @@ void turnOffLight(int pos) {
 }
 
 void fireNoise() {
-    tone(buzzerPin, fireSound, 200);
+  //  tone(buzzerPin, fireSound, 200);
+
+  for(int i = 0; i< 200; i++) {
+    //tone(buzzerPin, fireSound, i);
+
+    digitalWrite(buzzerPin, HIGH);
+     delayMicroseconds(i*3);
+     digitalWrite(buzzerPin, LOW);
+  // tone(buzzerPin, fireSound, i);
+
+     delayMicroseconds(i*2);
+  }
 }
 
 void playWarning() {
@@ -252,14 +276,29 @@ void startupSequence() {
   strip.setPixelColor(7, power[7]);
   strip.show();
   playWarning();
-
+  
 
   for (int i = LED_COUNT - 2; i >= 0; i--) {
     delay(500);
     strip.setPixelColor(i, power[i]);
     strip.show();
-  }
 
+    if(i < 5) {
+      backpackstrip.setPixelColor(5, blue);
+      backpackstrip.show();
+    }
+
+    uint32_t redStart = backpackstrip.gamma32(backpackstrip.ColorHSV(0, 255, 255 + (-i * 30)));
+     backpackstrip.setPixelColor(0, redStart);
+     backpackstrip.setPixelColor(1, redStart);
+     backpackstrip.setPixelColor(2, redStart);
+     backpackstrip.setPixelColor(3, redStart);
+     backpackstrip.show();
+  }
+  
+  backpackstrip.setPixelColor(4, blue);
+  backpackstrip.show();
+  
   playLongWarning();
   currentCharge = 7;
   Serial.println("Ready!!");
